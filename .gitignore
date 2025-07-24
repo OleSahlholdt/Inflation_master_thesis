@@ -5,3 +5,4 @@ CPI.csv
 *.cpt
 *.npy
 *.pyc
+*.pth

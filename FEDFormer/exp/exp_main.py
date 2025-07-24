@@ -305,7 +305,7 @@ class Exp_Main(Exp_Basic):
         # Create SHAP explainer
         explainer = shap.GradientExplainer(wrapped_model, batch_x)
 
-        shap_values = explainer.shap_values(batch_x)
+        shap_values = explainer.shap_values(batch_x, nsamples=1)
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
