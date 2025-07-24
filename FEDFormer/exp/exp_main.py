@@ -299,17 +299,13 @@ class Exp_Main(Exp_Basic):
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
                 pred = outputs.detach().cpu().numpy()  # .squeeze()
                 preds.append(pred)
-        
-        
         # Wrap model
         wrapped_model = FullModelWrapper(self.model, batch_x_mark, dec_inp, batch_y_mark).to(self.device)
-        predict_fn = TorchToNumpyWrapper(wrapped_model, device=self.device)
 
-        # batch_x for SHAP needs to be a NumPy array
-        batch_x_np = batch_x.cpu().numpy()
+        # Create SHAP explainer
+        explainer = shap.DeepExplainer(wrapped_model, batch_x)
 
-        explainer = shap.KernelExplainer(predict_fn, batch_x_np)
-        shap_values = explainer.shap_values(batch_x_np)
+        shap_values = explainer.shap_values(batch_x, nsamples=1)
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
@@ -318,6 +314,8 @@ class Exp_Main(Exp_Basic):
         folder_path = './results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
+
+        torch.save(self.model.state_dict(), "best_models/" + 'checkpoint.pth')
 
         np.save(folder_path + 'real_prediction.npy', preds)
 
@@ -340,18 +338,3 @@ class FullModelWrapper(torch.nn.Module):
 
         # Flatten last two dimensions: [batch, h*p]
         return output.view(output.size(0), -1)
-    
-class TorchToNumpyWrapper:
-    def __init__(self, model, device=None):
-        self.model = model.eval()
-        self.device = device or next(model.parameters()).device
-
-    def __call__(self, batch_np):
-        """
-        batch_np: NumPy array of shape [batch, ...] corresponds to batch_x
-        Returns: NumPy array of shape [batch, output_flat_dim]
-        """
-        with torch.no_grad():
-            x = torch.from_numpy(batch_np).float().to(self.device)
-            out = self.model(x)
-            return out.cpu().numpy()
