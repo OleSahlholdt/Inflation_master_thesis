@@ -315,8 +315,6 @@ class Exp_Main(Exp_Basic):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        torch.save(self.model.state_dict(), "best_models/" + 'checkpoint.pth')
-
         np.save(folder_path + 'real_prediction.npy', preds)
 
         np.save(folder_path + 'shap_values_full.npy', shap_values)
