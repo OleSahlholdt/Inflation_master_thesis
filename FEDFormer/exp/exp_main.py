@@ -333,5 +333,8 @@ class FullModelWrapper(torch.nn.Module):
         self.batch_y_mark = batch_y_mark
 
     def forward(self, batch_x):
-        # Return full model output: [batch, 12, 97]
-        return self.model(batch_x, self.batch_x_mark, self.dec_inp, self.batch_y_mark)
+        # Output shape: [batch, h, 97]
+        output = self.model(batch_x, self.batch_x_mark, self.dec_inp, self.batch_y_mark)
+
+        # Flatten last two dimensions: [batch, h*p]
+        return output.view(output.size(0), -1)
