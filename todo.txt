@@ -1,0 +1,6 @@
+Prepare data: Calculate inflation, global factor and regional factor
+
+Implement simple model: Proof of concept / baseline 
+
+Decide on transformer model(s) (read litterature)
+implement one.
