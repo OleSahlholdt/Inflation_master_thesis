@@ -303,9 +303,9 @@ class Exp_Main(Exp_Basic):
         wrapped_model = FullModelWrapper(self.model, batch_x_mark, dec_inp, batch_y_mark).to(self.device)
 
         # Create SHAP explainer
-        explainer = shap.GradientExplainer(wrapped_model, batch_x)
+        explainer = shap.KernelExplainer(wrapped_model, batch_x)
 
-        shap_values = explainer.shap_values(batch_x, nsamples=1)
+        shap_values = explainer.shap_values(batch_x)
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
