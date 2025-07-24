@@ -1,0 +1,7 @@
+*/__pycache__/*
+Inflation.csv
+CPI.csv
+*.pkl
+*.cpt
+*.npy
+*.pyc
