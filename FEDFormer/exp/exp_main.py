@@ -305,7 +305,7 @@ class Exp_Main(Exp_Basic):
         # Create SHAP explainer
         explainer = shap.DeepExplainer(wrapped_model, batch_x)
 
-        shap_values = explainer.shap_values(batch_x, nsamples=1)
+        shap_values = explainer.shap_values(batch_x)
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
@@ -315,7 +315,7 @@ class Exp_Main(Exp_Basic):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        torch.save(self.model.state_dict(), "best_models/" + 'checkpoint.pth')
+        #torch.save(self.model.state_dict(), "best_models/" + 'checkpoint.pth')
 
         np.save(folder_path + 'real_prediction.npy', preds)
 
