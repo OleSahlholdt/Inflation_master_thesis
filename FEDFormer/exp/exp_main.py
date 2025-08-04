@@ -30,7 +30,7 @@ class Exp_Main(Exp_Basic):
             'Informer': Informer,
         }
         model = model_dict[self.args.model].Model(self.args).float()
-
+        model = model.to(self.device)
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids=self.args.device_ids)
         return model
@@ -343,6 +343,7 @@ class Exp_Main(Exp_Basic):
             print(f"Starting Fold {fold + 1}/{k_folds}")
             print(f"Train len: {len(train_idx)}, Validation indices: {len(val_idx)}")
             # Create train and validation subsets
+            self.model = self._build_model()  # Rebuild model for each fold
             train_subset = Subset(full_dataset, train_idx)
             val_subset = Subset(full_dataset, val_idx)
 
