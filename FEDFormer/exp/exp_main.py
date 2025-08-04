@@ -91,7 +91,7 @@ class Exp_Main(Exp_Basic):
         vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
 
-        self.train_model_on_data(setting, train_loader, vali_data, vali_loader, test_data, test_loader)
+        self.train_model_on_data(setting, train_loader, vali_data, vali_loader)
         return self.model
 
     def train_model_on_data(self, setting, train_loader, vali_data, vali_loader):
@@ -341,7 +341,7 @@ class Exp_Main(Exp_Basic):
 
         for fold, (train_idx, val_idx) in enumerate(kf.split(indices)):
             print(f"Starting Fold {fold + 1}/{k_folds}")
-            print(f"Train indices: {train_idx}, Validation indices: {val_idx}")
+            print(f"Train len: {len(train_idx)}, Validation indices: {len(val_idx)}")
             # Create train and validation subsets
             train_subset = Subset(full_dataset, train_idx)
             val_subset = Subset(full_dataset, val_idx)
