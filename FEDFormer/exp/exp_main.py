@@ -2,7 +2,7 @@ import os
 import time
 import warnings
 import numpy as np
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, TimeSeriesSplit
 import torch
 import torch.nn as nn
 from torch import optim
@@ -310,6 +310,7 @@ class Exp_Main(Exp_Basic):
         # Create SHAP explainer
         explainer = shap.DeepExplainer(wrapped_model, batch_x)
 
+        print('Calculating SHAP values...')
         shap_values = explainer.shap_values(batch_x)
 
         preds = np.array(preds)
@@ -336,11 +337,11 @@ class Exp_Main(Exp_Basic):
         # Load the full dataset
         full_dataset, _ = self._get_data(flag='train', use_full_data=True)
         indices = np.arange(len(full_dataset))
-        kf = KFold(n_splits=k_folds, shuffle=True, random_state=42)
+        kf = TimeSeriesSplit(n_splits=k_folds)
 
         for fold, (train_idx, val_idx) in enumerate(kf.split(indices)):
             print(f"Starting Fold {fold + 1}/{k_folds}")
-
+            print(f"Train indices: {train_idx}, Validation indices: {val_idx}")
             # Create train and validation subsets
             train_subset = Subset(full_dataset, train_idx)
             val_subset = Subset(full_dataset, val_idx)
@@ -356,7 +357,7 @@ class Exp_Main(Exp_Basic):
         avg_loss = np.mean(results)
         print(f"Cross-Validation Results: {results}")
         print(f"Average Validation Loss: {avg_loss:.4f}")
-        return results
+        return avg_loss
     
 
 class FullModelWrapper(torch.nn.Module):
@@ -368,8 +369,14 @@ class FullModelWrapper(torch.nn.Module):
         self.batch_y_mark = batch_y_mark
 
     def forward(self, batch_x):
-        # Output shape: [batch, h, 97]
-        output = self.model(batch_x, self.batch_x_mark, self.dec_inp, self.batch_y_mark)
+        B = batch_x.size(0)  # dynamic batch size
+
+        # Expand auxiliary inputs to match batch size
+        batch_x_mark = self.batch_x_mark.expand(B, -1, -1)
+        dec_inp = self.dec_inp.expand(B, -1, -1)
+        batch_y_mark = self.batch_y_mark.expand(B, -1, -1)
+
+        output = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
         # Flatten last two dimensions: [batch, h*p]
-        return output.view(output.size(0), -1)
+        return output.view(B, -1)
