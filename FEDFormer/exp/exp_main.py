@@ -2,6 +2,7 @@ import os
 import time
 import warnings
 import numpy as np
+from sklearn.model_selection import KFold
 import torch
 import torch.nn as nn
 from torch import optim
@@ -11,6 +12,7 @@ from models import FEDformer, Autoformer, Informer, Transformer
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
 from utils.metrics import metric
 import shap
+from torch.utils.data import Subset, DataLoader
 
 
 warnings.filterwarnings('ignore')
@@ -33,8 +35,8 @@ class Exp_Main(Exp_Basic):
             model = nn.DataParallel(model, device_ids=self.args.device_ids)
         return model
 
-    def _get_data(self, flag):
-        data_set, data_loader = data_provider(self.args, flag)
+    def _get_data(self, flag, use_full_data=False):
+        data_set, data_loader = data_provider(self.args, flag, use_full_data=use_full_data)
         return data_set, data_loader
 
     def _select_optimizer(self):
@@ -89,6 +91,10 @@ class Exp_Main(Exp_Basic):
         vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
 
+        self.train_model_on_data(setting, train_loader, vali_data, vali_loader, test_data, test_loader)
+        return self.model
+
+    def train_model_on_data(self, setting, train_loader, vali_data, vali_loader):
         path = os.path.join(self.args.checkpoints, setting)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -166,10 +172,9 @@ class Exp_Main(Exp_Basic):
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
             vali_loss = self.vali(vali_data, vali_loader, criterion)
-            test_loss = self.vali(test_data, test_loader, criterion)
 
-            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
-                epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}".format(
+                epoch + 1, train_steps, train_loss, vali_loss))
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -180,7 +185,7 @@ class Exp_Main(Exp_Basic):
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
 
-        return self.model
+        return self.model, vali_loss
 
     def test(self, setting, test=0):
         test_data, test_loader = self._get_data(flag='test')
@@ -322,6 +327,36 @@ class Exp_Main(Exp_Basic):
         np.save(folder_path + 'shap_values_full.npy', shap_values)
 
         return
+    
+    def cross_validate(self, setting, k_folds=5):
+        """
+        Perform k-fold cross-validation.
+        """
+        results = []
+        # Load the full dataset
+        full_dataset, _ = self._get_data(flag='train', use_full_data=True)
+        indices = np.arange(len(full_dataset))
+        kf = KFold(n_splits=k_folds, shuffle=True, random_state=42)
+
+        for fold, (train_idx, val_idx) in enumerate(kf.split(indices)):
+            print(f"Starting Fold {fold + 1}/{k_folds}")
+
+            # Create train and validation subsets
+            train_subset = Subset(full_dataset, train_idx)
+            val_subset = Subset(full_dataset, val_idx)
+
+            # Create DataLoaders for the subsets
+            train_loader = DataLoader(train_subset, batch_size=self.args.batch_size, shuffle=True)
+            val_loader = DataLoader(val_subset, batch_size=self.args.batch_size, shuffle=False)
+
+            model, val_loss = self.train_model_on_data(setting, train_loader=train_loader, vali_data=val_subset, vali_loader=val_loader)
+            results.append(val_loss)
+
+        # Print overall results
+        avg_loss = np.mean(results)
+        print(f"Cross-Validation Results: {results}")
+        print(f"Average Validation Loss: {avg_loss:.4f}")
+        return results
     
 
 class FullModelWrapper(torch.nn.Module):
