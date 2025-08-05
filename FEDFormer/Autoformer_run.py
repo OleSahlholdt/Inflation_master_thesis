@@ -12,6 +12,7 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id):
     Runs the experiment for a given task ID and prediction length.
     """
     args.task_id = task_id
+    args.do_predict = True
 
     print(f"Pred length: {args.pred_len}")
 
