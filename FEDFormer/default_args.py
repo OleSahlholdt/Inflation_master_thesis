@@ -75,7 +75,7 @@ def FEDFormer_default_args():
 
     # optimization
     parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
-    parser.add_argument('--itr', type=int, default=3, help='experiments times')
+    parser.add_argument('--itr', type=int, default=1, help='experiments times')
     parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
     parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
@@ -141,7 +141,7 @@ def Informer_default_args():
     parser.add_argument('--mix', action='store_false', help='use mix attention in generative decoder', default=True)
     parser.add_argument('--cols', type=str, nargs='+', help='certain cols from the data files as the input features')
     parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
-    parser.add_argument('--itr', type=int, default=2, help='experiments times')
+    parser.add_argument('--itr', type=int, default=1, help='experiments times')
     parser.add_argument('--train_epochs', type=int, default=6, help='train epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
     parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
@@ -214,7 +214,7 @@ def Autoformer_default_args():
 
     # optimization
     parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')
-    parser.add_argument('--itr', type=int, default=2, help='experiments times')
+    parser.add_argument('--itr', type=int, default=1, help='experiments times')
     parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
     parser.add_argument('--patience', type=int, default=3, help='early stopping patience')

@@ -21,6 +21,7 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id, pred_len):
             month = (i % 12) + 1
             if i == 0 or month == 12:
                 best_loss, best_args, best_setting = perform_cross_validation(args, seq_lengths, kernel_sizes)
+            best_args.idx = i
             train_best_model(best_args, best_setting)
 
             if args.do_predict:
@@ -40,26 +41,22 @@ def perform_cross_validation(args, seq_lengths, kernel_sizes):
         args.seq_len = seq_length
         args.label_len = label_length
 
-        for ii in range(args.itr):
-            setting = create_experiment_setting(args, ii)
-            exp = Exp(args)
-
-            print(f'>>>>>>>start cv : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>')
-            try:
-                loss = exp.cross_validate(setting)
-            except Exception as e:
-                raise(e)
-                print(f"===========================GOT ERROR: {e}")
-                continue
-
-            print(f"Validation Loss {loss}")
-            torch.cuda.empty_cache()
-
-            if loss < best_loss:
-                print(f"New best model with loss: {loss}")
-                best_loss = loss
-                best_args = args
-                best_setting = setting
+        setting = create_experiment_setting(args)
+        exp = Exp(args)
+        print(f'>>>>>>>start cv : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>')
+        try:
+            loss = exp.cross_validate(setting)
+        except Exception as e:
+            raise(e)
+            print(f"===========================GOT ERROR: {e}")
+            continue
+        print(f"Validation Loss {loss}")
+        torch.cuda.empty_cache()
+        if loss < best_loss:
+            print(f"New best model with loss: {loss}")
+            best_loss = loss
+            best_args = args
+            best_setting = setting
 
     return best_loss, best_args, best_setting
 
@@ -74,12 +71,14 @@ def generate_combinations(seq_lengths, kernel_sizes):
                 yield kernel_size, seq_length, label_length
 
 
-def train_best_model(args, setting):
+def train_best_model(args):
     """
     Trains the best model configuration.
     """
     exp = Exp(args)
+    setting = create_experiment_setting(args)
     print(f'>>>>>>>start training : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>')
+
     exp.train(setting)
 
 
@@ -93,16 +92,16 @@ def perform_prediction(setting):
     exp.predict(setting, True)
 
     # Clean up checkpoints
-    checkpoint_dir = r"C:\Users\osahl\Desktop\UNI\master thesis\Transformer-Master-Thesis\FEDFormer\Autoformer_checkpoints"
+    checkpoint_dir = r"/Autoformer_checkpoints"
     for ckpt in os.listdir(checkpoint_dir):
         shutil.rmtree(rf'{checkpoint_dir}/{ckpt}')
 
 
-def create_experiment_setting(args, iteration):
+def create_experiment_setting(args):
     """
     Creates a unique experiment setting string based on the current arguments.
     """
-    return '{}_{}_seqlen{}_labellen{}_heads{}_encoderlayers{}_dm{}_ma{}_{}'.format(
+    return '{}_{}_seqlen{}_labellen{}_heads{}_encoderlayers{}_dm{}_ma{}'.format(
         args.idx,
         args.task_id,
         args.seq_len,
@@ -111,11 +110,10 @@ def create_experiment_setting(args, iteration):
         args.e_layers,
         args.d_model,
         args.moving_avg,
-        iteration
     )
 
 args = Autoformer_default_args()
-args.batch_size = 16
+args.batch_size = 8
 
 if __name__ == "__main__":
     seq_lengths = [6, 12, 24]
