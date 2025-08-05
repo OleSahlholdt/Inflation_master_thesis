@@ -7,12 +7,11 @@ from exp.exp_main import Exp_Main
 from default_args import Autoformer_default_args
 
 Exp = Exp_Main
-def run_experiment(args, seq_lengths, kernel_sizes, task_id, pred_len):
+def run_experiment(args, seq_lengths, kernel_sizes, task_id):
     """
     Runs the experiment for a given task ID and prediction length.
     """
     args.task_id = task_id
-    args.pred_len = pred_len
 
     for model in ['Autoformer']:
         args.model = model
@@ -22,7 +21,7 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id, pred_len):
             if i == 0 or month == 12:
                 best_loss, best_args, best_setting = perform_cross_validation(args, seq_lengths, kernel_sizes)
             best_args.idx = i
-            train_best_model(best_args, best_setting)
+            train_best_model(best_args)
 
             if args.do_predict:
                 perform_prediction(best_setting)
@@ -116,6 +115,7 @@ args = Autoformer_default_args()
 args.batch_size = 8
 
 if __name__ == "__main__":
+
     seq_lengths = [6, 12, 24]
     kernel_sizes = [5, 9, 13]
-    run_experiment(args, seq_lengths, kernel_sizes, task_id="Autoformer_h1", pred_len=1)
+    run_experiment(args, seq_lengths, kernel_sizes, task_id="Autoformer_h1")
