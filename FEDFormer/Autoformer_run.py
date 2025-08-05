@@ -13,6 +13,8 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id):
     """
     args.task_id = task_id
 
+    print(f"Pred length: {args.pred_len}")
+
     for model in ['Autoformer']:
         args.model = model
         for i in tqdm(range(0, 238)):
