@@ -97,7 +97,7 @@ def perform_prediction(setting):
     exp.predict(setting, True)
 
     # Clean up checkpoints
-    checkpoint_dir = r"Autoformer_checkpoints/"
+    checkpoint_dir = r"Informer_checkpoints/"
     for ckpt in os.listdir(checkpoint_dir):
         shutil.rmtree(rf'{checkpoint_dir}/{ckpt}')
 
