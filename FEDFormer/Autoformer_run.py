@@ -24,10 +24,10 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id):
             if i == 0 or month == 12:
                 best_loss, best_args, best_setting = perform_cross_validation(args, seq_lengths, kernel_sizes)
             best_args.idx = i
-            train_best_model(best_args)
+            setting = train_best_model(best_args)
 
             if args.do_predict:
-                perform_prediction(best_setting)
+                perform_prediction(setting)
 
 
 def perform_cross_validation(args, seq_lengths, kernel_sizes):
@@ -82,6 +82,7 @@ def train_best_model(args):
     print(f'>>>>>>>start training : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>')
 
     exp.train(setting)
+    return setting
 
 
 def perform_prediction(setting):
