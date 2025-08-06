@@ -309,7 +309,10 @@ class Exp_Main(Exp_Basic):
         wrapped_model = FullModelWrapper(self.model, batch_x_mark, dec_inp, batch_y_mark).to(self.device)
 
         # Create SHAP explainer
-        explainer = shap.DeepExplainer(wrapped_model, batch_x)
+        if self.args.model.lower() == 'informer':
+            explainer = shap.GradientExplainer(wrapped_model, batch_x)
+        else:
+            explainer = shap.DeepExplainer(wrapped_model, batch_x)
 
         print('Calculating SHAP values...')
         shap_values = explainer.shap_values(batch_x)
