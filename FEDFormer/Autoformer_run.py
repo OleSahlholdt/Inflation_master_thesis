@@ -120,7 +120,7 @@ args.batch_size = 8
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    seq_lengths = [6, 12, 24]
-    kernel_sizes = [5, 9, 13]
+    seq_lengths = [6, 12, 24, 36]
+    kernel_sizes = [5, 9, 13, 25]
     horizon = f"h{args.pred_len}"
     run_experiment(args, seq_lengths, kernel_sizes, task_id=f"Autoformer_{horizon}")
