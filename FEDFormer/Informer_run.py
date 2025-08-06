@@ -118,6 +118,7 @@ def create_experiment_setting(args):
 
 args = Informer_default_args()
 args.batch_size = 8
+args.train_epochs = 10
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
