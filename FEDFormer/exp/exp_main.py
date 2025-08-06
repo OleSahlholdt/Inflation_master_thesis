@@ -302,8 +302,8 @@ class Exp_Main(Exp_Basic):
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                     else:
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-                pred = outputs.detach().cpu().numpy() # .squeeze()
-                pred = pred_data.inverse_transform(pred)
+                pred = outputs.detach().cpu().numpy()
+                pred = pred_data.inverse_transform(pred[0])
                 preds.append(pred)
         # Wrap model
         wrapped_model = FullModelWrapper(self.model, batch_x_mark, dec_inp, batch_y_mark).to(self.device)
