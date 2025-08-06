@@ -1,4 +1,5 @@
 
+import copy
 import os
 import shutil
 import torch
@@ -57,7 +58,7 @@ def perform_cross_validation(args, seq_lengths, kernel_sizes):
         if loss < best_loss:
             print(f"New best model with loss: {loss}")
             best_loss = loss
-            best_args = args
+            best_args = copy.deepcopy(args)
             best_setting = setting
 
     return best_loss, best_args, best_setting
