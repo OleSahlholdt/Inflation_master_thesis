@@ -20,6 +20,8 @@ def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
     for model in ['Informer']:
         args.model = model
         for i in tqdm(range(0, 238)):
+            args.idx = i
+            month = (i % 12) + 1
             if i == 0 or month == 12:
                 best_loss, best_args, best_setting = perform_cross_validation(args, seq_lengths, n_heads, encoder_layers)
             # Create a new copy for each idx to avoid mutation issues
