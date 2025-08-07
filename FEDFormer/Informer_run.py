@@ -20,15 +20,14 @@ def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
     for model in ['Informer']:
         args.model = model
         for i in tqdm(range(0, 238)):
-            args.idx = i
-            month = (i % 12) + 1
             if i == 0 or month == 12:
                 best_loss, best_args, best_setting = perform_cross_validation(args, seq_lengths, n_heads, encoder_layers)
-            best_args.idx = i
-            setting = train_best_model(best_args)
-
+            # Create a new copy for each idx to avoid mutation issues
+            current_args = copy.deepcopy(best_args)
+            current_args.idx = i
+            setting = train_best_model(current_args)
             if args.do_predict:
-                perform_prediction(setting)
+                perform_prediction(setting, current_args)
 
 
 def perform_cross_validation(args, seq_lengths, n_heads, encoder_layers):
@@ -88,11 +87,10 @@ def train_best_model(args):
     return setting
 
 
-def perform_prediction(setting):
+def perform_prediction(setting, args):
     """
     Performs prediction using the best model configuration.
     """
-    print(f'>>>>>>>start prediction_training : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>')
     print(f'>>>>>>>predicting : {setting}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
     exp = Exp(args)
     exp.predict(setting, True)
