@@ -229,9 +229,8 @@ class Dataset_Custom(Dataset):
         df_raw.columns: ['date', ...(other features), target feature]
         '''
         cols = list(df_raw.columns)
-        cols.remove(self.target)
         cols.remove('date')
-        df_raw = df_raw[['date'] + cols + [self.target]]
+        df_raw = df_raw[['date'] + cols]
         # print(cols)
         if self.use_full_data:
             num_train = int(len(df_raw))
@@ -329,18 +328,17 @@ class Dataset_Pred(Dataset):
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
         
-        df_raw = df_raw.iloc[2 + self.idx: 242 + self.idx, :]
+        df_raw = df_raw.iloc[self.idx: 240 + self.idx, :]
         '''
         df_raw.columns: ['date', ...(other features), target feature]
         '''
         if self.cols:
             cols = self.cols.copy()
-            cols.remove(self.target)
         else:
             cols = list(df_raw.columns)
-            cols.remove(self.target)
             cols.remove('date')
-        df_raw = df_raw[['date'] + cols + [self.target]]
+        self.columns_to_predict = cols.copy()
+        df_raw = df_raw[['date'] + cols]
         border1 = len(df_raw) - self.seq_len
         border2 = len(df_raw)
 
@@ -374,12 +372,14 @@ class Dataset_Pred(Dataset):
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
             data_stamp = data_stamp.transpose(1, 0)
 
+        self.df_stamp = df_stamp
         self.data_x = data[border1:border2]
         if self.inverse:
             self.data_y = df_data.values[border1:border2]
         else:
             self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
+        self.df_data = df_data
 
     def __getitem__(self, index):
         s_begin = index

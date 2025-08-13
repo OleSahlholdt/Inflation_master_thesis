@@ -13,6 +13,7 @@ from utils.tools import EarlyStopping, adjust_learning_rate, visual
 from utils.metrics import metric
 import shap
 from torch.utils.data import Subset, DataLoader
+import pickle
 
 
 warnings.filterwarnings('ignore')
@@ -319,6 +320,8 @@ class Exp_Main(Exp_Basic):
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        prediction_timestamps = pred_data.df_stamp['date'].values[-self.args.pred_len:]
+        prediction_cols = pred_data.columns_to_predict
 
         # result save
         folder_path = './results/' + setting + '/'
@@ -326,6 +329,14 @@ class Exp_Main(Exp_Basic):
             os.makedirs(folder_path)
 
         #torch.save(self.model.state_dict(), "best_models/" + 'checkpoint.pth')
+
+        data_dict = {
+            'predictions': preds,
+            'timestamps': prediction_timestamps,
+            'columns': prediction_cols,
+        }
+        with open(folder_path + "prediction.pkl", "wb") as f:
+            pickle.dump(data_dict, f)
 
         np.save(folder_path + 'real_prediction.npy', preds)
 

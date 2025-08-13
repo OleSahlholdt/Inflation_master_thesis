@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -62,6 +63,9 @@ class dotdict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+    
+    def __deepcopy__(self, memo):
+        return dotdict(copy.deepcopy(dict(self), memo))
 
 class StandardScaler():
     def __init__(self):
