@@ -22,7 +22,7 @@ def FEDFormer_default_args():
                         help='model name, options: [FEDformer, Autoformer, Informer, Transformer]')
 
     # supplementary config for FEDformer model
-    parser.add_argument('--version', type=str, default='Fourier',
+    parser.add_argument('--version', type=str, default='Wavelets',
                         help='for FEDformer, there are two versions to choose, options: [Fourier, Wavelets]')
     parser.add_argument('--mode_select', type=str, default='random',
                         help='for FEDformer, there are two mode selection method, options: [random, low]')
@@ -43,7 +43,7 @@ def FEDFormer_default_args():
     parser.add_argument('--freq', type=str, default='m',
                         help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, '
                                 'b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
-    parser.add_argument('--detail_freq', type=str, default='h', help='like freq, but use in predict')
+    parser.add_argument('--detail_freq', type=str, default='m', help='like freq, but use in predict')
     parser.add_argument('--checkpoints', type=str, default='./FEDFormer_checkpoints/', help='location of model checkpoints')
 
     # forecasting task
@@ -62,7 +62,7 @@ def FEDFormer_default_args():
     parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
     parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
     parser.add_argument('--moving_avg', default=[24], help='window size of moving average')
-    parser.add_argument('--factor', type=int, default=1, help='attn factor')
+    parser.add_argument('--factor', type=int, default=3, help='attn factor')
     parser.add_argument('--distil', action='store_false',
                         help='whether to use distilling in encoder, using this argument means not using distilling',
                         default=True)
