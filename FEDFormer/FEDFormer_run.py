@@ -17,7 +17,7 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id):
 
     print(f"Pred length: {args.pred_len}")
 
-    for model in ['Autoformer']:
+    for model in ['FEDFormer']:
         args.model = model
         for i in tqdm(range(0, 238)):
             args.idx = i
@@ -96,7 +96,7 @@ def perform_prediction(setting):
     exp.predict(setting, True)
 
     # Clean up checkpoints
-    checkpoint_dir = r"Autoformer_checkpoints/"
+    checkpoint_dir = r"FEDFormer_checkpoints/"
     for ckpt in os.listdir(checkpoint_dir):
         shutil.rmtree(rf'{checkpoint_dir}/{ckpt}')
 
@@ -124,4 +124,4 @@ if __name__ == "__main__":
     seq_lengths = [12, 24, 36]
     kernel_sizes = [9, 13, 25]
     horizon = f"h{args.pred_len}"
-    run_experiment(args, seq_lengths, kernel_sizes, task_id=f"Autoformer_{horizon}")
+    run_experiment(args, seq_lengths, kernel_sizes, task_id=f"FEDFormer_{horizon}")
