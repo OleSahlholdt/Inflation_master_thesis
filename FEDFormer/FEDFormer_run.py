@@ -17,7 +17,7 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id):
 
     print(f"Pred length: {args.pred_len}")
 
-    for model in ['FEDFormer']:
+    for model in ['FEDformer']:
         args.model = model
         for i in tqdm(range(0, 238)):
             args.idx = i
