@@ -19,7 +19,7 @@ def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
 
     for model in ['Informer']:
         args.model = model
-        for i in tqdm(range(0, 238)):
+        for i in tqdm(range(0, 118)):
             args.idx = i
             month = (i % 12) + 1
             if i == 0 or month == 12:

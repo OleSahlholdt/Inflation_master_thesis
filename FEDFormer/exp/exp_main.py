@@ -338,7 +338,7 @@ class Exp_Main(Exp_Basic):
         with open(folder_path + "prediction.pkl", "wb") as f:
             pickle.dump(data_dict, f)
 
-        np.save(folder_path + 'real_prediction.npy', preds)
+        #np.save(folder_path + 'real_prediction.npy', preds)
 
         np.save(folder_path + 'shap_values_full.npy', shap_values)
 
