@@ -37,14 +37,13 @@ def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
             joblib.dump(study, folder_path + "optuna_study.pkl")
 
 
-def objective(trial, args, seq_lengths, n_heads, encoder_layers):
+def objective(trial, args, n_heads, encoder_layers, valid_seq_label_pairs):
     # === Architecture choices ===
     args.n_heads = trial.suggest_categorical("n_heads", n_heads)
     args.e_layers = trial.suggest_categorical("e_layers", encoder_layers)
-    args.seq_len = trial.suggest_categorical("seq_len", seq_lengths)
-    args.label_len = trial.suggest_categorical(
-        "label_len", [l for l in seq_lengths if l <= args.seq_len]
-    )
+    seq_len, label_len = trial.suggest_categorical("seq_label_pair", valid_seq_label_pairs)
+    args.seq_len = seq_len
+    args.label_len = label_len
 
     # d_model must be divisible by n_heads in most implementations
     possible_d_models = [128, 256, 512]
@@ -81,9 +80,14 @@ def perform_cross_validation(args, seq_lengths, n_heads, encoder_layers, n_trial
     """
     Uses Optuna to find the best model configuration.
     """
+    valid_seq_label_pairs = []
+    for seq_len in seq_lengths:
+        for label_len in seq_lengths:
+            if label_len <= seq_len:
+                valid_seq_label_pairs.append((seq_len, label_len))
     study = optuna.create_study(direction="minimize")
     study.optimize(
-        lambda trial: objective(trial, args, seq_lengths, n_heads, encoder_layers),
+        lambda trial: objective(trial, args, n_heads, encoder_layers, valid_seq_label_pairs),
         n_trials=n_trials,
     )
 
