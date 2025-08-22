@@ -7,6 +7,7 @@ from exp.exp_main import Exp_Main
 from default_args import Informer_default_args
 import copy
 import optuna
+import joblib
 
 Exp = Exp_Main
 def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
@@ -24,13 +25,17 @@ def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
             args.idx = i
             month = (i % 12) + 1
             if i == 0 or month == 12:
-                best_loss, best_args, best_setting = perform_cross_validation(args, seq_lengths, n_heads, encoder_layers)
+                best_loss, best_args, best_setting, study = perform_cross_validation(args, seq_lengths, n_heads, encoder_layers)
             # Create a new copy for each idx to avoid mutation issues
             current_args = copy.deepcopy(best_args)
             current_args.idx = i
             setting = train_best_model(current_args)
             if args.do_predict:
                 perform_prediction(setting, current_args)
+            folder_path = './results/' + setting + '/'
+            # save after tuning
+            joblib.dump(study, folder_path + "optuna_study.pkl")
+
 
 def objective(trial, args, seq_lengths, n_heads, encoder_layers):
     # === Architecture choices ===
@@ -93,7 +98,7 @@ def perform_cross_validation(args, seq_lengths, n_heads, encoder_layers, n_trial
     best_setting = create_experiment_setting(best_args)
     print(f"Best params: {best_params}, Best loss: {best_loss}")
 
-    return best_loss, best_args, best_setting
+    return best_loss, best_args, best_setting, study
 
 
 def generate_combinations(seq_lengths, n_heads, encoder_layers):
