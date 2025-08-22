@@ -6,6 +6,7 @@ from tqdm import tqdm
 from exp.exp_main import Exp_Main
 from default_args import Informer_default_args
 import copy
+import optuna
 
 Exp = Exp_Main
 def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
@@ -31,37 +32,66 @@ def run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id):
             if args.do_predict:
                 perform_prediction(setting, current_args)
 
+def objective(trial, args, seq_lengths, n_heads, encoder_layers):
+    # === Architecture choices ===
+    args.n_heads = trial.suggest_categorical("n_heads", n_heads)
+    args.e_layers = trial.suggest_categorical("e_layers", encoder_layers)
+    args.seq_len = trial.suggest_categorical("seq_len", seq_lengths)
+    args.label_len = trial.suggest_categorical(
+        "label_len", [l for l in seq_lengths if l <= args.seq_len]
+    )
 
-def perform_cross_validation(args, seq_lengths, n_heads, encoder_layers):
+    # d_model must be divisible by n_heads in most implementations
+    possible_d_models = [128, 256, 512]
+    args.d_model = trial.suggest_categorical(
+        "d_model", [dm for dm in possible_d_models if dm % args.n_heads == 0]
+    )
+
+    args.d_ff = trial.suggest_categorical("d_ff", [256, 512, 1024, 2048])
+    args.dropout = trial.suggest_float("dropout", 0.0, 0.3)
+
+    # === Training hyperparameters ===
+    args.learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
+    args.batch_size = trial.suggest_categorical("batch_size", [8, 16, 32])
+
+    # (optional) Decoder layers if your Exp_Main supports it
+    # args.d_layers = trial.suggest_categorical("d_layers", [1, 2, 3])
+
+    # === Run experiment ===
+    setting = create_experiment_setting(args)
+    exp = Exp(args)
+    print(f'>>>>>>> start optuna trial: {setting} >>>>>>>>>>>>>>>>>>>>>>>>>')
+
+    try:
+        loss = exp.cross_validate(setting)
+    except Exception as e:
+        print(f"Trial failed: {e}")
+        return float("inf")  # penalize failed trial
+
+    torch.cuda.empty_cache()
+    return loss
+
+
+def perform_cross_validation(args, seq_lengths, n_heads, encoder_layers, n_trials=50):
     """
-    Performs cross-validation to find the best model configuration.
+    Uses Optuna to find the best model configuration.
     """
-    best_loss = float('inf')
-    best_args, best_setting = None, None
+    study = optuna.create_study(direction="minimize")
+    study.optimize(
+        lambda trial: objective(trial, args, seq_lengths, n_heads, encoder_layers),
+        n_trials=n_trials,
+    )
 
-    # Generate all combinations of kernel_size, seq_length, and label_length
-    for heads, encoder_layer, seq_length, label_length in generate_combinations(seq_lengths, n_heads, encoder_layers):
-        args.n_heads = heads
-        args.e_layers = encoder_layer
-        args.seq_len = seq_length
-        args.label_len = label_length
+    best_loss = study.best_value
+    best_params = study.best_params
 
-        setting = create_experiment_setting(args)
-        exp = Exp(args)
-        print(f'>>>>>>>start cv : {setting}>>>>>>>>>>>>>>>>>>>>>>>>>>')
-        try:
-            loss = exp.cross_validate(setting)
-        except Exception as e:
-            raise(e)
-            print(f"===========================GOT ERROR: {e}")
-            continue
-        print(f"Validation Loss {loss}")
-        torch.cuda.empty_cache()
-        if loss < best_loss:
-            print(f"New best model with loss: {loss}")
-            best_loss = loss
-            best_args = copy.deepcopy(args)
-            best_setting = setting
+    # Apply best params to args
+    best_args = copy.deepcopy(args)
+    for k, v in best_params.items():
+        setattr(best_args, k, v)
+
+    best_setting = create_experiment_setting(best_args)
+    print(f"Best params: {best_params}, Best loss: {best_loss}")
 
     return best_loss, best_args, best_setting
 
@@ -107,14 +137,14 @@ def create_experiment_setting(args):
     """
     Creates a unique experiment setting string based on the current arguments.
     """
-    return '{}_{}_seqlen{}_labellen{}_heads{}_encoderlayers{}_dm{}'.format(
-        args.idx,
-        args.task_id,
-        args.seq_len,
-        args.label_len,
-        args.n_heads,
-        args.e_layers,
-        args.d_model
+    return (
+        f"{args.idx}_{args.task_id}_"
+        f"seqlen{args.seq_len}_labellen{args.label_len}_"
+        f"heads{args.n_heads}_encoderlayers{args.e_layers}_"
+        f"dm{args.d_model}_dff{args.d_ff}_"
+        f"drop{args.dropout:.2f}_"
+        f"lr{args.learning_rate:.0e}_"
+        f"bs{args.batch_size}"
     )
 
 args = Informer_default_args()
@@ -123,8 +153,9 @@ args.train_epochs = 10
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    n_heads = [8, 16]
-    encoder_layers = [2, 3, 4]
-    seq_lengths = [12, 24, 36]
+    n_heads = [8]#, 16]
+    encoder_layers = [2]#, 3, 4]
+    seq_lengths = [12]#, 24, 36]
+    args.pred_len = 1
     horizon = f"h{args.pred_len}"
     run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id=f"Informer_{horizon}")

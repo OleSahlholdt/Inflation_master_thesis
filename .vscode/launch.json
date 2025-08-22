@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug Current File (Full Step-In)",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "debugStdLib": true,
+      "redirectOutput": true,
+      "env": {},
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

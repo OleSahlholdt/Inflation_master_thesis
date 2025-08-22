@@ -306,22 +306,15 @@ class Exp_Main(Exp_Basic):
                 pred = outputs.detach().cpu().numpy()
                 pred = pred_data.inverse_transform(pred[0])
                 preds.append(pred)
-        # Wrap model
-        wrapped_model = FullModelWrapper(self.model, batch_x_mark, dec_inp, batch_y_mark).to(self.device)
-
-        # Create SHAP explainer
-        if self.args.model.lower() == 'informer':
-            explainer = shap.GradientExplainer(wrapped_model, batch_x)
-        else:
-            explainer = shap.DeepExplainer(wrapped_model, batch_x)
 
         print('Calculating SHAP values...')
-        shap_values = explainer.shap_values(batch_x)
+        explanation = self.calculate_shap(setting, to_explain = (batch_x, batch_x_mark, dec_inp, batch_y_mark))
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         prediction_timestamps = pred_data.df_stamp['date'].values[-self.args.pred_len:]
         prediction_cols = pred_data.columns_to_predict
+
 
         # result save
         folder_path = './results/' + setting + '/'
@@ -337,13 +330,71 @@ class Exp_Main(Exp_Basic):
         }
         with open(folder_path + "prediction.pkl", "wb") as f:
             pickle.dump(data_dict, f)
+                # Save SHAP values
 
-        #np.save(folder_path + 'real_prediction.npy', preds)
-
-        np.save(folder_path + 'shap_values_full.npy', shap_values)
+        with open(folder_path + 'shap_explanation_full.pkl', 'wb') as f:
+            pickle.dump(explanation, f)
 
         return
-    
+
+    def calculate_shap(self, setting, n_background=100, to_explain=None):
+        train_data, train_loader = self._get_data(flag='train')
+
+        # Load best model if needed
+        path = os.path.join(self.args.checkpoints, setting)
+        best_model_path = path + '/' + 'checkpoint.pth'
+        self.model.load_state_dict(torch.load(best_model_path))
+        self.model.eval()
+
+        # --- Prepare background from train_loader ---
+        background_batches = []
+        total_samples = 0
+        for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
+            batch_x = batch_x.float().to(self.device)
+            batch_x_mark = batch_x_mark.float().to(self.device)
+            batch_y_mark = batch_y_mark.float().to(self.device)
+            # decoder input
+            dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
+            dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+            background_batches.append((batch_x, batch_x_mark, dec_inp, batch_y_mark))
+            total_samples += batch_x.shape[0]
+            if total_samples >= n_background:
+                break
+
+        # Stack background tensors
+        batch_x_bg = torch.cat([x[0] for x in background_batches], dim=0)
+        batch_x_mark_bg = torch.cat([x[1] for x in background_batches], dim=0)
+        dec_inp_bg = torch.cat([x[2] for x in background_batches], dim=0)
+        batch_y_mark_bg = torch.cat([x[3] for x in background_batches], dim=0)
+
+        sizes = [
+            batch_x_bg.shape[-1],
+            batch_x_mark_bg.shape[-1],
+            dec_inp_bg.shape[-1],
+            batch_y_mark_bg.shape[-1]
+        ]
+        batch_x_to_exp, batch_x_mark_to_exp, dec_inp_to_exp, batch_y_mark_to_exp = to_explain
+        # Prepare encoder inputs
+        background = torch.cat([batch_x_bg, batch_x_mark_bg], dim=-1)
+        to_explain = torch.cat([batch_x_to_exp, batch_x_mark_to_exp], dim=-1)
+
+        # Build wrapper and set decoder parts
+        wrapped_model = FullModelWrapper(
+            self.model, sizes[:2],
+            dec_inp_bg, batch_y_mark_bg,
+            dec_inp_to_exp, batch_y_mark_to_exp
+        ).to(self.device)
+
+        # Set mode for background
+        wrapped_model.set_mode('background')
+        explainer = shap.GradientExplainer(wrapped_model, background)
+
+        # Set mode for to_explain
+        wrapped_model.set_mode('explain')
+        explanation = explainer(to_explain)
+
+        return explanation
+
     def cross_validate(self, setting, k_folds=5):
         """
         Perform k-fold cross-validation.
@@ -377,22 +428,36 @@ class Exp_Main(Exp_Basic):
     
 
 class FullModelWrapper(torch.nn.Module):
-    def __init__(self, model, batch_x_mark, dec_inp, batch_y_mark):
+    def __init__(self, model, sizes, dec_inp_bg, batch_y_mark_bg, dec_inp_explain, batch_y_mark_explain):
         super().__init__()
         self.model = model
-        self.batch_x_mark = batch_x_mark
-        self.dec_inp = dec_inp
-        self.batch_y_mark = batch_y_mark
+        self.sizes = sizes  # list of feature sizes for each input
+        self.dec_inp_bg = dec_inp_bg
+        self.batch_y_mark_bg = batch_y_mark_bg
+        self.dec_inp_explain = dec_inp_explain
+        self.batch_y_mark_explain = batch_y_mark_explain
+        self.mode = 'background'  # default mode
 
-    def forward(self, batch_x):
-        B = batch_x.size(0)  # dynamic batch size
+    def set_mode(self, mode):
+        self.mode = mode
 
-        # Expand auxiliary inputs to match batch size
-        batch_x_mark = self.batch_x_mark.expand(B, -1, -1)
-        dec_inp = self.dec_inp.expand(B, -1, -1)
-        batch_y_mark = self.batch_y_mark.expand(B, -1, -1)
+    def forward(self, x):
+        # x: [batch, seq_len, total_features]
+        batch_size, seq_len, _ = x.shape
+        idx = 0
+        splits = []
+        for size in self.sizes[:2]:  # Only encoder inputs
+            splits.append(x[:, :, idx:idx+size])
+            idx += size
+        batch_x, batch_x_mark = splits
+
+        # Select decoder inputs based on mode
+        if self.mode == 'background':
+            dec_inp = self.dec_inp_bg.expand(batch_size, -1, -1)
+            batch_y_mark = self.batch_y_mark_bg.expand(batch_size, -1, -1)
+        else:
+            dec_inp = self.dec_inp_explain.expand(batch_size, -1, -1)
+            batch_y_mark = self.batch_y_mark_explain.expand(batch_size, -1, -1)
 
         output = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-
-        # Flatten last two dimensions: [batch, h*p]
-        return output.view(B, -1)
+        return output.view(batch_size, -1)
