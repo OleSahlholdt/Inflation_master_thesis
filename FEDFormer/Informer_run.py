@@ -158,9 +158,8 @@ args.train_epochs = 10
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    n_heads = [8]#, 16]
-    encoder_layers = [2]#, 3, 4]
-    seq_lengths = [12]#, 24, 36]
-    args.pred_len = 1
+    n_heads = [8, 16]
+    encoder_layers = [2, 3, 4]
+    seq_lengths = [12, 24, 36]
     horizon = f"h{args.pred_len}"
     run_experiment(args, seq_lengths, n_heads, encoder_layers, task_id=f"Informer_{horizon}")
