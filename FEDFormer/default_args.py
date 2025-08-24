@@ -35,7 +35,7 @@ def FEDFormer_default_args():
     # data loader
     parser.add_argument('--data', type=str, default='custom', help='dataset type')
     parser.add_argument('--root_path', type=str, default='./dataset/', help='root path of the data file')
-    parser.add_argument('--data_path', type=str, default='Inflation.csv', help='data file')
+    parser.add_argument('--data_path', type=str, default='Inflation_transformer.csv', help='data file')
     parser.add_argument('--features', type=str, default='M',
                         help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, '
                                 'S:univariate predict univariate, MS:multivariate predict univariate')
@@ -102,7 +102,7 @@ def Informer_default_args():
     # data loader
     parser.add_argument('--data', type=str, default='custom', help='dataset type')
     parser.add_argument('--root_path', type=str, default='./dataset/', help='root path of the data file')
-    parser.add_argument('--data_path', type=str, default='Inflation.csv', help='data file')
+    parser.add_argument('--data_path', type=str, default='Inflation_transformer.csv', help='data file')
     parser.add_argument('--features', type=str, default='M',
                         help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, '
                                 'S:univariate predict univariate, MS:multivariate predict univariate')
@@ -173,7 +173,7 @@ def Autoformer_default_args():
     # data loader
     parser.add_argument('--data', type=str, default='custom', help='dataset type')
     parser.add_argument('--root_path', type=str, default='./dataset/', help='root path of the data file')
-    parser.add_argument('--data_path', type=str, default='Inflation.csv', help='data file')
+    parser.add_argument('--data_path', type=str, default='Inflation_transformer.csv', help='data file')
     parser.add_argument('--features', type=str, default='M',
                         help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, '
                                 'S:univariate predict univariate, MS:multivariate predict univariate')
