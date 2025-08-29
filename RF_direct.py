@@ -1,7 +1,5 @@
 import argparse
 import pandas as pd
-from darts.models import AutoARIMA
-from darts import TimeSeries
 import pickle
 
 
@@ -24,8 +22,6 @@ inflation_df = inflation_df.iloc[2:].asfreq("MS")
 
 inflation_df_train = inflation_df[inflation_df.index < pd.Timestamp('2000-03-01')]
 inflation_df_test = inflation_df[inflation_df.index >= pd.Timestamp('2000-03-01')]
-
-inflation_series = TimeSeries.from_dataframe(inflation_df)
 
 country_names = inflation_df.columns[:-12]
 
