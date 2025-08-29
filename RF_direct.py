@@ -88,7 +88,7 @@ def run_rf_direct(inflation_df, country_names, select_covariates, train_length, 
             historical_forecasts = []
             best_params_list = []
             shap_values = []
-            tune_time = ((len(target_series) - h) - start_idx) // 2
+            tune_time = ((len(target_series) - h) - start_idx) // 2 + start_idx
             for t in tqdm.tqdm(range(start_idx, len(target_series) - h)):
                 train_end_idx = t
                 train_start_idx = max(0, train_end_idx - train_length)
