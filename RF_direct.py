@@ -1,4 +1,5 @@
 import argparse
+import os
 import pandas as pd
 import pickle
 
@@ -87,7 +88,7 @@ def run_rf_direct(inflation_df, country_names, select_covariates, train_length, 
             historical_forecasts = []
             best_params_list = []
             shap_values = []
-
+            tune_time = ((len(target_series) - h) - start_idx) // 2
             for t in tqdm.tqdm(range(start_idx, len(target_series) - h)):
                 train_end_idx = t
                 train_start_idx = max(0, train_end_idx - train_length)
@@ -98,7 +99,7 @@ def run_rf_direct(inflation_df, country_names, select_covariates, train_length, 
             # Forecast covariates for time t+h
                 full_forecast_data = inflation_df.iloc[train_start_idx:train_end_idx + h + 1]
 
-                if t % ((len(target_series) - h)//2) == 0 or t == start_idx:
+                if t == tune_time or t == start_idx:
                     best_score = float('inf')
                     for p in p_values:
                         covariates = select_covariates(train_data, country_name, p=p).iloc[p:-h]
@@ -144,6 +145,8 @@ def run_rf_direct(inflation_df, country_names, select_covariates, train_length, 
             out = {"forecast": historical_forecasts,
                "best_params": best_params_list,
                "shap_explanation": shap_values}
+            if os.path.exists('RF_forecasts') is False:
+                os.makedirs('RF_forecasts')
             with open(f'RF_forecasts/RF_forecast_h{h}_{country_name}.pkl', 'wb') as f:
                 pickle.dump(out, f)
 
