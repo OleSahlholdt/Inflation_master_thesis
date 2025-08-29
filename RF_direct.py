@@ -98,7 +98,7 @@ def run_rf_direct(inflation_df, country_names, select_covariates, train_length, 
             # Forecast covariates for time t+h
                 full_forecast_data = inflation_df.iloc[train_start_idx:train_end_idx + h + 1]
 
-                if t % 120 == 0 or t == start_idx:
+                if t % ((len(target_series) - h)//2) == 0 or t == start_idx:
                     best_score = float('inf')
                     for p in p_values:
                         covariates = select_covariates(train_data, country_name, p=p).iloc[p:-h]
