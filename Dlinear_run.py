@@ -117,9 +117,10 @@ param_grid = {'kernel_size': [5, 9, 13],
 
 # Assuming `inflation_series` is a DataFrame with countries as columns
 forecasts_country = {}
-start_date = pd.Timestamp('2000-03-01')
 train_length = 360  # Rolling window size
-for h in [1, 3, 6, 12]:
+start_date = inflation_df.index[train_length]
+print(f"start_date: {start_date}")
+for h in [1, 6, 12]:
     print(f"h: {h}")
     dlinear = DLinearModel(
 
@@ -160,12 +161,13 @@ for h in [1, 3, 6, 12]:
         forecast = best_model.predict(h)
         covariate_names = inflation_series.drop_columns(list(country_names)).columns
 
-        shap_df = shap_values_dlinear(best_model, best_model.pred_loader_out, 
+        shap_explanation = shap_values_dlinear(best_model, best_model.pred_loader_out, 
                                       country_names=country_names, 
                                       covariate_names=covariate_names,
                                       train_loader=best_model.train_loader_out, n_background=100)
         historical_forecasts.append(forecast[0])
     forecasts = pd.Series(historical_forecasts)
+    out_dict = {"forecast": forecasts, "shap_explanation": shap_explanation}
 
     with open(f'dlinear_forecasts/dlinear_forecast_h{h}.pkl', 'wb') as f:
-        pickle.dump(forecasts, f)
+        pickle.dump(out_dict, f)
