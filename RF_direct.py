@@ -74,7 +74,7 @@ max_horizon = 12
 def get_predictor_grid(p):
     return list(set([p, int(2/3 * p), int(1/3 * p), int(sqrt(p)), int(log2(p))]))
 
-p_values = [4, 12]  # Values of lags to try
+p_values = [4, 12, 24]  # Values of lags to try
 
 def run_rf_direct(inflation_df, country_names, select_covariates, train_length, start_date, max_horizon, get_predictor_grid, p_values, start_horizon, end_horizon):
     for i, country_name in enumerate(country_names):
