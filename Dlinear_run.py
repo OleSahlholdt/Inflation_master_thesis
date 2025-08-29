@@ -118,7 +118,7 @@ param_grid = {'kernel_size': [5, 9, 13],
 # Assuming `inflation_series` is a DataFrame with countries as columns
 forecasts_country = {}
 train_length = 360  # Rolling window size
-start_date = inflation_df.index[train_length]
+start_date = inflation_df.index[train_length-1]
 print(f"start_date: {start_date}")
 for h in [1, 6, 12]:
     print(f"h: {h}")

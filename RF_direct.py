@@ -69,7 +69,7 @@ import shap
 
 # Set parameters
 train_length = 360  # Rolling window size
-start_date = inflation_df.index[train_length]
+start_date = inflation_df.index[train_length-1]
 print(f"start_date: {start_date}")
 max_horizon = 12
 
