@@ -91,6 +91,10 @@ def FEDFormer_default_args():
     parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
     parser.add_argument('--devices', type=str, default='0,1', help='device ids of multi gpus')
 
+    # Control range:
+    parser.add_argument("--start_idx", type=int, default=0, help="start index for training")
+    parser.add_argument("--end_idx", type=int, default=118, help="end index for training")
+
     args = dotdict(vars(parser.parse_args()))
     return args
 

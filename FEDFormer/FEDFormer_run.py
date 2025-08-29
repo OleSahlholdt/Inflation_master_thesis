@@ -51,7 +51,8 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id):
 
     for model in ['FEDformer']:
         args.model = model
-        for i in tqdm(range(0, 118)):
+        print(f"Running {model} in range {args.start_idx} to {args.end_idx}")
+        for i in tqdm(range(args.start_idx, args.end_idx)):
             args.idx = i
             month = (i % 12) + 1
             if i == 0 or month == 12:
@@ -120,7 +121,6 @@ def create_experiment_setting(args):
     )
 
 args = FEDFormer_default_args()
-args.batch_size = 8
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
