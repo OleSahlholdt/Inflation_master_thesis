@@ -55,7 +55,7 @@ def run_experiment(args, seq_lengths, kernel_sizes, task_id):
         for i in tqdm(range(args.start_idx, args.end_idx)):
             args.idx = i
             month = (i % 12) + 1
-            if i == 0 or month == 12:
+            if i == args.start_idx or month == 12:
                 best_loss, best_args, best_setting, study = perform_cross_validation(args, seq_lengths, kernel_sizes)
             # Create a new copy for each idx to avoid mutation issues
             current_args = copy.deepcopy(best_args)
