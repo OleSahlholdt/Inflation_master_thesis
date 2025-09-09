@@ -19,7 +19,7 @@ inflation_df.columns = cols
 
 inflation_df.index = pd.to_datetime(inflation_df.index.astype(str), format='%Y%m')
 
-inflation_df = inflation_df.iloc[2:].asfreq("MS")
+inflation_df = inflation_df.asfreq("MS")
 
 country_names = inflation_df.columns[:-12]
 
