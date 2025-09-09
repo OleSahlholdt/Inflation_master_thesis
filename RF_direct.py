@@ -19,10 +19,7 @@ inflation_df.columns = cols
 
 inflation_df.index = pd.to_datetime(inflation_df.index.astype(str), format='%Y%m')
 
-inflation_df = inflation_df.iloc[2:].asfreq("MS")
-
-inflation_df_train = inflation_df[inflation_df.index < pd.Timestamp('2000-03-01')]
-inflation_df_test = inflation_df[inflation_df.index >= pd.Timestamp('2000-03-01')]
+inflation_df = inflation_df.iloc.asfreq("MS")
 
 country_names = inflation_df.columns[:-12]
 
