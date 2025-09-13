@@ -4,6 +4,12 @@ from darts import TimeSeries
 import pickle
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
+my_stopper = EarlyStopping(
+    monitor="val_loss",
+    patience=3,
+    min_delta=0,
+    mode='min',
+)
 
 inflation_df = pd.read_csv("Inflation.csv", index_col=0, header = [0,1])
 CPI_df = pd.read_csv("CPI.csv", index_col=0, header = [0,1])
@@ -31,7 +37,7 @@ country_names = inflation_df.columns[:-12]
 
 import numpy as np
 import pandas as pd
-from darts.models import DLinearModel
+from darts.models import NLinearModel
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from math import sqrt, log2
 import tqdm
@@ -43,7 +49,7 @@ import shap
 import torch
 import torch.nn as nn
 
-class DLinearWrapper(nn.Module):
+class nlinearWrapper(nn.Module):
     def __init__(self, model, input_chunk_length, n_features):
         super().__init__()
         self.model = model
@@ -57,7 +63,7 @@ class DLinearWrapper(nn.Module):
         y_pred = self.model((x, None, None))
         return y_pred.view(B, -1)
 
-def shap_values_dlinear(best_model, pred_loader, country_names, covariate_names, 
+def shap_values_nlinear(best_model, pred_loader, country_names, covariate_names, 
                         train_loader, n_background):
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -88,7 +94,7 @@ def shap_values_dlinear(best_model, pred_loader, country_names, covariate_names,
     input_chunk_length = best_model.input_chunk_length
 
     # wrap model
-    wrapped_model = DLinearWrapper(best_model.model, input_chunk_length, n_features).to(device)
+    wrapped_model = nlinearWrapper(best_model.model, input_chunk_length, n_features).to(device)
     
     # --- SHAP explainer ---
     explainer = shap.GradientExplainer(wrapped_model, background)
@@ -97,20 +103,7 @@ def shap_values_dlinear(best_model, pred_loader, country_names, covariate_names,
 
     return shap_values
 
-dlinear = DLinearModel(
-
-    input_chunk_length=4,
-
-    output_chunk_length=1,
-
-    kernel_size=12,
-
-    batch_size = 8,
-
-    n_epochs=20,
-)
-
-param_grid = {'kernel_size': [5, 9, 13, 25],
+param_grid = {
               'input_chunk_length': [4, 8, 12, 24],
               "output_chunk_length": [1],
               "pl_trainer_kwargs": [{"enable_progress_bar": False, "enable_model_summary": False}]
@@ -123,13 +116,11 @@ start_date = inflation_df.index[train_length-1]
 print(f"start_date: {start_date}")
 for h in [1, 6, 12]:
     print(f"h: {h}")
-    dlinear = DLinearModel(
+    nlinear = NLinearModel(
 
     input_chunk_length=4,
 
     output_chunk_length=h,
-
-    kernel_size=12,
 
     batch_size = 8,
 
@@ -147,9 +138,9 @@ for h in [1, 6, 12]:
         # Extract training data
         train_series = train_data[4:]
         if inflation_series[t].time_index.month == 12 or t == start_idx:
-            # Fit dlinear model with grid search
+            # Fit nlinear model with grid search
             # Use TimeSeriesSplit for time series cross-validation
-            grid_search = dlinear.gridsearch(param_grid, 
+            grid_search = nlinear.gridsearch(param_grid, 
                                             train_series[list(country_names)], 
                                             inflation_series.drop_columns(list(country_names)), 
                                             forecast_horizon = len(train_series)//5, stride = len(train_series)//5, 
@@ -158,13 +149,13 @@ for h in [1, 6, 12]:
             best_model = grid_search[0]
             best_params = best_model.model_params
         else:
-            best_model = DLinearModel(**{**best_params, "batch_size": 8, "n_epochs": 20, "output_chunk_length": h})
-        best_model.fit(series=train_series[list(country_names)], past_covariates=inflation_series.drop_columns(list(country_names)))
+            best_model = NLinearModel(**{**best_params, "batch_size": 8, "n_epochs": 20, "output_chunk_length": h})
         # Forecast h steps ahead
+        best_model.fit(series=train_series[list(country_names)], past_covariates=inflation_series.drop_columns(list(country_names)))
         forecast = best_model.predict(h)
         covariate_names = inflation_series.drop_columns(list(country_names)).columns
 
-        shap_explanation = shap_values_dlinear(best_model, best_model.pred_loader_out, 
+        shap_explanation = shap_values_nlinear(best_model, best_model.pred_loader_out, 
                                       country_names=country_names, 
                                       covariate_names=covariate_names,
                                       train_loader=best_model.train_loader_out, n_background=100)
@@ -173,5 +164,5 @@ for h in [1, 6, 12]:
     forecasts = pd.Series(historical_forecasts)
     out_dict = {"forecast": forecasts, "shap_explanation": all_shap_explanations}
 
-    with open(f'dlinear_forecasts/dlinear_forecast_h{h}.pkl', 'wb') as f:
+    with open(f'nlinear_forecasts/nlinear_forecast_h{h}.pkl', 'wb') as f:
         pickle.dump(out_dict, f)
