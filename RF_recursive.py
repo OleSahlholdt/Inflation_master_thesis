@@ -119,7 +119,7 @@ def run_rf_recursive(inflation_df, country_names, select_covariates,
         historical_forecasts = []  # (timestamp, forecast_value, horizon)
         best_params_list = []
         shap_values_list = []
-        tune_time = ((len(target_series) - h) - start_idx) // 2 + start_idx
+        tune_time = ((len(target_series) - max_horizon) - start_idx) // 2 + start_idx
 
         for t in tqdm.tqdm(range(start_idx, len(target_series) - max_horizon)):
             train_end_idx = t
