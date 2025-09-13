@@ -203,17 +203,37 @@ def run_rf_recursive(inflation_df, country_names, select_covariates,
 # -----------------------------
 # Main
 # -----------------------------
+# -----------------------------
+# Main
+# -----------------------------
+# -----------------------------
+# Main
+# -----------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Random Forest Recursive Forecasting")
     parser.add_argument("--max_horizon", type=int, default=12, help="Forecast horizon")
+    parser.add_argument("--part", type=int, choices=[1, 2, 3], default=1,
+                        help="Which third of countries to process (1, 2, or 3)")
     args = parser.parse_args()
 
     train_length = 360
     start_date = inflation_df.index[train_length - 1]
     p_values = [4, 12, 24]
 
+    # --- split countries into three chunks ---
+    n = len(country_names)
+    chunk_size = n // 3
+    if args.part == 1:
+        countries_subset = country_names[:chunk_size]
+    elif args.part == 2:
+        countries_subset = country_names[chunk_size:2*chunk_size]
+    else:  # part 3
+        countries_subset = country_names[2*chunk_size:]
+
     run_rf_recursive(
-        inflation_df, country_names, select_covariates,
+        inflation_df, countries_subset, select_covariates,
         train_length, start_date, args.max_horizon,
         get_predictor_grid, p_values
     )
+
+
