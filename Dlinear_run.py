@@ -121,7 +121,7 @@ forecasts_country = {}
 train_length = 360  # Rolling window size
 start_date = inflation_df.index[train_length-1]
 print(f"start_date: {start_date}")
-for h in [1, 6, 12]:
+for h in [12]:
     print(f"h: {h}")
     dlinear = DLinearModel(
 
@@ -134,6 +134,11 @@ for h in [1, 6, 12]:
     batch_size = 8,
 
     n_epochs=20)
+    param_grid = {'kernel_size': [5, 9, 13, 25],
+              'input_chunk_length': [4, 8, 12, 24],
+              "output_chunk_length": [h],
+              "pl_trainer_kwargs": [{"enable_progress_bar": False, "enable_model_summary": False}]
+              }
 
     # Extract the target time series
     historical_forecasts = []
@@ -157,6 +162,7 @@ for h in [1, 6, 12]:
             # Get the best model from grid search
             best_model = grid_search[0]
             best_params = best_model.model_params
+            print(f"Best params at time {t}: {best_params}")
         else:
             best_model = DLinearModel(**{**best_params, "batch_size": 8, "n_epochs": 20, "output_chunk_length": h})
         best_model.fit(series=train_series[list(country_names)], past_covariates=inflation_series.drop_columns(list(country_names)))
@@ -168,6 +174,7 @@ for h in [1, 6, 12]:
                                       country_names=country_names, 
                                       covariate_names=covariate_names,
                                       train_loader=best_model.train_loader_out, n_background=100)
+        print(shap_explanation.shape)
         historical_forecasts.append(forecast)
         all_shap_explanations.append(shap_explanation)
     forecasts = pd.Series(historical_forecasts)

@@ -1,5 +1,3 @@
-# dlinear_recursive.py
-
 import os
 import pickle
 import darts
@@ -14,7 +12,7 @@ import torch.nn as nn
 from math import sqrt, log2
 from sklearn.model_selection import ParameterGrid
 from darts import TimeSeries
-from darts.models import DLinearModel
+from darts.models import NLinearModel
 from darts.metrics import rmse
 
 # -----------------------------
@@ -37,7 +35,7 @@ start_date = inflation_df.index[train_length - 1]
 # -----------------------------
 # Model wrapper for SHAP
 # -----------------------------
-class DLinearWrapper(nn.Module):
+class NLinearWrapper(nn.Module):
     def __init__(self, model, input_chunk_length, n_targets, n_covariates, horizon=12):
         super().__init__()
         self.model = model
@@ -76,7 +74,7 @@ class DLinearWrapper(nn.Module):
         return preds.reshape(B, -1)
 
 
-def shap_values_dlinear_recursive(
+def shap_values_nlinear_recursive(
     best_model,
     pred_loader,
     train_loader,
@@ -86,7 +84,7 @@ def shap_values_dlinear_recursive(
     n_background: int = 100,
 ):
     """
-    SHAP with recursive DLinearWrapper.
+    SHAP with recursive NLinearWrapper.
     - Builds background and explain tensors by CONCAT(target, past_covariates) along features (last dim).
     - Uses the recursive wrapper so SHAP "sees" the full h-step recursive mapping.
     """
@@ -110,7 +108,7 @@ def shap_values_dlinear_recursive(
     x_to_explain = concat_tp(batch).to(device)
 
     # wrapper with recursion
-    wrapped = DLinearWrapper(
+    wrapped = NLinearWrapper(
         model=best_model.model,
         input_chunk_length=best_model.input_chunk_length,
         n_targets=n_targets,
@@ -126,27 +124,7 @@ def shap_values_dlinear_recursive(
 
 # -----------------------------
 # Recursive validation scoring
-# -----------------------------
-def recursive_validation_score(model_class, params, train_series, val_series, past_covariates, horizon):
-    """
-    Fit DLinear (or similar) with output_chunk_length=1 and evaluate recursive forecasts.
-    Uses a rolling-origin setup: train on train_series, validate on val_series.
-    """
-    # enforce recursive setup
-    params = {**params, "output_chunk_length": 1}
-
-    # fit model
-    model = model_class(**params)
-    model.fit(series=train_series, past_covariates=past_covariates)
-
-    # predict horizon steps ahead in one call (internally recursive)
-    forecast = model.predict(horizon, series=train_series, past_covariates=past_covariates, show_warnings=False)
-
-    # align with val_series
-    val_series = val_series.slice_intersect(forecast)
-
-    return rmse(val_series, forecast)
-
+# ----------------------------
 def recursive_forecast(model, train_series, horizon, past_covariates):
     preds = []
     current_series = train_series
@@ -189,6 +167,27 @@ def recursive_forecast(model, train_series, horizon, past_covariates):
     # return a single stacked series instead of list
     return darts.concatenate(preds)
 
+def recursive_validation_score(model_class, params, train_series, val_series, past_covariates, horizon):
+    """
+    Fit NLinear (or similar) with output_chunk_length=1 and evaluate recursive forecasts.
+    Uses a rolling-origin setup: train on train_series, validate on val_series.
+    """
+    # enforce recursive setup
+    params = {**params, "output_chunk_length": 1}
+
+    # fit model
+    model = model_class(**params)
+    model.fit(series=train_series, past_covariates=past_covariates)
+
+    # predict horizon steps ahead in one call (internally recursive)
+    forecast = model.predict(horizon, series=train_series, past_covariates=past_covariates, show_warnings=False)
+
+    # align with val_series
+    val_series = val_series.slice_intersect(forecast)
+
+    return rmse(val_series, forecast)
+
+
 def recursive_gridsearch(model_class, param_grid, train_series, val_series, past_covariates, horizon):
     """
     Grid search over params with recursive forecasting.
@@ -218,7 +217,6 @@ if __name__ == "__main__":
     logging.getLogger("pytorch_lightning.accelerators.cuda").setLevel(logging.WARNING)
 
     param_grid = {
-        "kernel_size": [5, 9, 13, 25],
         "input_chunk_length": [4, 8, 12, 24],
         "output_chunk_length": [1],  # recursive → always 1-step
         "pl_trainer_kwargs": [{"enable_progress_bar": False, "enable_model_summary": False}],
@@ -227,7 +225,7 @@ if __name__ == "__main__":
     }
 
     for h in [12]:
-        print(f"Recursive DLinear forecasting, horizon={h}")
+        print(f"Recursive NLinear forecasting, horizon={h}")
         historical_forecasts = []
         all_shap_explanations = []
 
@@ -244,20 +242,25 @@ if __name__ == "__main__":
             # tuning once every 12 months
             if inflation_series[t].time_index.month == 12 or t == start_idx:
                 best_params, best_score = recursive_gridsearch(
-                    DLinearModel, param_grid,
+                    NLinearModel, param_grid,
                     train_data, val_data, past_covariates, h
                 )
                 print(f"Best params at {inflation_series[t].time_index}: {best_params} (score={best_score:.4f})")
             else:
                 best_params = best_params
 
-            best_model = DLinearModel(**best_params)
+            best_model = NLinearModel(**best_params)
             best_model.fit(series=train_data[list(country_names)], past_covariates=past_covariates)
 
-            forecast = recursive_forecast(best_model, train_data[list(country_names)], h, past_covariates)
+            forecast = recursive_forecast(
+                best_model,
+                train_data[list(country_names)],
+                h,
+                past_covariates
+            )
             historical_forecasts.append(forecast)
 
-            shap_explanation = shap_values_dlinear_recursive(
+            shap_explanation = shap_values_nlinear_recursive(
                 best_model,
                 best_model.pred_loader_out,
                 best_model.train_loader_out,
@@ -269,7 +272,7 @@ if __name__ == "__main__":
             all_shap_explanations.append(shap_explanation)
 
         out_dict = {"forecast": historical_forecasts, "shap_explanation": all_shap_explanations}
-        if not os.path.exists("dlinear_forecasts_recursive"):
-            os.makedirs("dlinear_forecasts_recursive")
-        with open(f"dlinear_forecasts_recursive/dlinear_forecast_h{h}.pkl", "wb") as f:
+        if not os.path.exists("nlinear_forecasts_recursive"):
+            os.makedirs("nlinear_forecasts_recursive")
+        with open(f"nlinear_forecasts_recursive/nlinear_forecast_h{h}.pkl", "wb") as f:
             pickle.dump(out_dict, f)
