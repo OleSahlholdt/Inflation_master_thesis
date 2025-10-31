@@ -73,6 +73,9 @@ This repository contains the code, data, and experiments for a master's thesis f
    - **File**: `FEDFormer/README.md`
    - Documentation for the FEDformer model, including citations and acknowledgments.
 
+### 8. **The Actual Thesis**
+   - The thesis can be found in Master_Thesis.pdf
+
 ---
 
 ## Acknowledgments
